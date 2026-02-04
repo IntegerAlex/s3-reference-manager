@@ -49,9 +49,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/akshat/s3-reference-manager"
-Documentation = "https://github.com/akshat/s3-reference-manager#readme"
-Repository = "https://github.com/akshat/s3-reference-manager"
+Homepage = "https://github.com/IntegerAlex/s3-reference-manager"
+Documentation = "https://github.com/IntegerAlex/s3-reference-manager#readme"
+Repository = "https://github.com/IntegerAlex/s3-reference-manager"
 
 [build-system]
 requires = ["hatchling"]
