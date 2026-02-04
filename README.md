@@ -32,32 +32,20 @@ pip install s3-reference-manager
 
 ```python
 from fastapi import FastAPI
-from pathlib import Path
-
-from s3gc.builder import (
-    build_config, create_empty_config, with_bucket,
-    scan_table, exclude_prefix, retain_objects_older_than,
-    enable_vault, execute_mode
-)
+from s3gc import create_config
 from s3gc.integrations.fastapi import setup_s3gc_plugin
 
 app = FastAPI()
 
-# Build configuration
-config = build_config(
-    enable_vault(
-        retain_objects_older_than(
-            exclude_prefix(
-                scan_table(
-                    with_bucket(create_empty_config(), "my-bucket"),
-                    "users", ["avatar_url"]
-                ),
-                "backups/"
-            ),
-            7  # 7-day retention
-        ),
-        Path("/var/lib/s3gc_vault")
-    )
+# Create configuration (simple and intuitive)
+config = create_config(
+    bucket="my-bucket",
+    tables={
+        "users": ["avatar_url"]
+    },
+    exclude_prefixes=["backups/"],
+    retention_days=7,
+    vault_path="/var/lib/s3gc_vault"
 )
 
 # Setup plugin
@@ -66,72 +54,102 @@ setup_s3gc_plugin(app, config)
 
 ## Configuration
 
-### Builder Pattern
+### Simple Configuration API
 
-S3 Reference Manager uses a functional builder pattern for clean, composable configuration:
+S3 Reference Manager provides a simple, intuitive configuration function:
+
+```python
+from s3gc import create_config
+
+# Basic configuration
+config = create_config(
+    bucket="my-bucket",
+    region="us-west-2",
+    tables={
+        "users": ["avatar_url", "cover_photo"],
+        "posts": ["featured_image"]
+    },
+    exclude_prefixes=["backups/", "system/", "tmp/"],
+    retention_days=7,
+    vault_path="/var/lib/s3gc_vault"
+)
+
+# With CDC and scheduling
+config = create_config(
+    bucket="my-bucket",
+    tables={
+        "users": ["avatar_url"],
+        "posts": ["featured_image"]
+    },
+    exclude_prefixes=["backups/", "system/"],
+    retention_days=7,
+    vault_path="/var/lib/s3gc_vault",
+    cdc_backend="postgres",
+    cdc_connection_url="postgresql://user:pass@host:5432/db",
+    schedule_cron="02:30"  # 2:30 AM UTC
+)
+
+# Execute mode (use with caution!)
+config = create_config(
+    bucket="my-bucket",
+    tables={"users": ["avatar_url"]},
+    mode="execute",  # Explicitly enable deletions
+    vault_path="/var/lib/s3gc_vault"
+)
+```
+
+### Advanced: Builder Pattern
+
+For advanced use cases, you can use the functional builder pattern:
 
 ```python
 from s3gc.builder import (
-    create_empty_config,
-    with_bucket,
-    with_region,
-    scan_table,
-    exclude_prefixes,
-    retain_objects_older_than,
-    enable_vault,
-    enable_cdc,
-    run_daily_at,
-    execute_mode,
-    build_config,
+    build_config, create_empty_config, with_bucket,
+    scan_table, exclude_prefixes, enable_vault
 )
-from s3gc.config import CDCBackend
 
 config = build_config(
-    run_daily_at(
-        enable_cdc(
-            enable_vault(
-                retain_objects_older_than(
-                    exclude_prefixes(
-                        scan_table(
-                            scan_table(
-                                with_region(
-                                    with_bucket(create_empty_config(), "my-bucket"),
-                                    "us-west-2"
-                                ),
-                                "users", ["avatar_url", "cover_photo"]
-                            ),
-                            "posts", ["featured_image"]
-                        ),
-                        ["backups/", "system/", "tmp/"]
-                    ),
-                    7  # days
-                ),
-                Path("/var/lib/s3gc_vault")
-            ),
-            CDCBackend.POSTGRES,
-            "postgresql://user:pass@host:5432/db"
+    enable_vault(
+        scan_table(
+            with_bucket(create_empty_config(), "my-bucket"),
+            "users", ["avatar_url"]
         ),
-        "02:30"  # 2:30 AM UTC
+        Path("/var/lib/s3gc_vault")
     )
 )
 ```
 
 ### Configuration Options
 
+All options can be passed to `create_config()` as keyword arguments:
+
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `bucket` | str | Required | S3 bucket name |
-| `region` | str | `us-east-1` | AWS region |
-| `tables` | dict | `{}` | Tables and columns to scan for references |
-| `mode` | GCMode | `DRY_RUN` | Execution mode |
-| `retention_days` | int | `7` | Minimum age before deletion |
-| `exclude_prefixes` | list | `[]` | S3 prefixes to exclude |
-| `vault_path` | Path | `./s3gc_vault` | Vault storage directory |
-| `backup_before_delete` | bool | `True` | Always backup before delete |
-| `compress_backups` | bool | `True` | Enable zstd compression |
-| `cdc_backend` | CDCBackend | `None` | CDC backend (postgres/mysql) |
-| `cdc_connection_url` | str | `None` | Database URL for CDC |
-| `schedule_cron` | str | `None` | Daily schedule in HH:MM format |
+| `bucket` | str | **Required** | S3 bucket name |
+| `region` | str | `"us-east-1"` | AWS region |
+| `tables` | dict | `{}` | Tables and columns to scan: `{"table": ["col1", "col2"]}` |
+| `mode` | str | `"dry_run"` | Execution mode: `"dry_run"`, `"audit_only"`, or `"execute"` |
+| `retention_days` | int | `7` | Minimum age in days before deletion |
+| `exclude_prefixes` | list | `[]` | S3 key prefixes to exclude from deletion |
+| `vault_path` | str/Path | `"./s3gc_vault"` | Vault storage directory path |
+| `cdc_backend` | str | `None` | CDC backend: `"postgres"` or `"mysql"` |
+| `cdc_connection_url` | str | `None` | Database connection URL (required if `cdc_backend` set) |
+| `schedule_cron` | str | `None` | Daily schedule in `"HH:MM"` format (UTC) |
+
+**Example:**
+```python
+config = create_config(
+    bucket="my-bucket",
+    region="us-west-2",
+    tables={"users": ["avatar_url"], "posts": ["image_url"]},
+    exclude_prefixes=["backups/", "system/"],
+    retention_days=14,
+    vault_path="/var/lib/s3gc_vault",
+    cdc_backend="postgres",
+    cdc_connection_url="postgresql://user:pass@host:5432/db",
+    schedule_cron="03:00"
+)
+```
 
 ### Execution Modes
 

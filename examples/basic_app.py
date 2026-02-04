@@ -2,10 +2,10 @@
 # Copyright (c) 2026 Akshat Kotpalliwar (alias IntegerAlex)
 
 """
-Example FastAPI Application with S3GC Integration.
+Example FastAPI Application with S3 Reference Manager Integration.
 
-This example demonstrates how to integrate S3GC into a FastAPI application
-with full configuration, CDC, and scheduled garbage collection.
+This example demonstrates how to integrate S3 Reference Manager into a FastAPI
+application using the simple create_config() API with CDC and scheduled runs.
 
 Run with:
     uvicorn examples.basic_app:app --reload
@@ -23,26 +23,13 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from s3gc.builder import (
-    build_config,
-    create_empty_config,
-    enable_cdc,
-    enable_vault,
-    exclude_prefix,
-    execute_mode,
-    retain_objects_older_than,
-    run_daily_at,
-    scan_table,
-    with_bucket,
-    with_region,
-)
-from s3gc.config import CDCBackend, GCMode
+from s3gc import create_config
 from s3gc.integrations.fastapi import setup_s3gc_plugin
 
 # Create FastAPI app
 app = FastAPI(
     title="My App with S3GC",
-    description="Example application demonstrating S3 Garbage Collection",
+    description="Example application demonstrating S3 Reference Manager",
     version="1.0.0",
 )
 
@@ -52,50 +39,30 @@ def create_s3gc_config():
     """
     Create S3GC configuration from environment variables.
 
-    This uses the functional builder pattern for clean, composable configuration.
+    Uses the simple create_config() API for easy configuration.
     """
     bucket = os.getenv("S3_BUCKET", "my-app-storage")
     region = os.getenv("AWS_REGION", "us-east-1")
     database_url = os.getenv("DATABASE_URL")
-    vault_path = Path(os.getenv("S3GC_VAULT_PATH", "/var/lib/s3gc_vault"))
+    vault_path = os.getenv("S3GC_VAULT_PATH", "/var/lib/s3gc_vault")
+    execute_mode_enabled = os.getenv("S3GC_EXECUTE_MODE", "false").lower() == "true"
 
-    # Start with empty config
-    config = create_empty_config()
-
-    # Set bucket and region
-    config = with_bucket(config, bucket)
-    config = with_region(config, region)
-
-    # Configure tables to scan for S3 references
-    config = scan_table(config, "users", ["avatar_url", "cover_photo"])
-    config = scan_table(config, "posts", ["featured_image", "gallery_images"])
-    config = scan_table(config, "products", ["thumbnail", "product_images"])
-
-    # Exclude certain prefixes from deletion
-    config = exclude_prefix(config, "system/")
-    config = exclude_prefix(config, "backups/")
-    config = exclude_prefix(config, "tmp/")
-
-    # Set retention period (7 days)
-    config = retain_objects_older_than(config, 7)
-
-    # Enable vault for backups
-    config = enable_vault(config, vault_path)
-
-    # Enable CDC if database URL is provided
-    if database_url:
-        config = enable_cdc(config, CDCBackend.POSTGRES, database_url)
-
-    # Schedule daily run at 2:30 AM UTC
-    config = run_daily_at(config, "02:30")
-
-    # IMPORTANT: Only enable execute mode explicitly in production
-    # Default is dry-run for safety
-    if os.getenv("S3GC_EXECUTE_MODE", "false").lower() == "true":
-        config = execute_mode(config)
-
-    # Build and validate configuration
-    return build_config(config)
+    return create_config(
+        bucket=bucket,
+        region=region,
+        tables={
+            "users": ["avatar_url", "cover_photo"],
+            "posts": ["featured_image", "gallery_images"],
+            "products": ["thumbnail", "product_images"],
+        },
+        exclude_prefixes=["system/", "backups/", "tmp/"],
+        retention_days=7,
+        vault_path=vault_path,
+        cdc_backend="postgres" if database_url else None,
+        cdc_connection_url=database_url,
+        schedule_cron="02:30",  # 2:30 AM UTC
+        mode="execute" if execute_mode_enabled else "dry_run",
+    )
 
 
 # Initialize configuration
@@ -104,11 +71,9 @@ try:
 except Exception as e:
     print(f"Failed to create S3GC config: {e}")
     # Use minimal config for development
-    s3gc_config = build_config(
-        enable_vault(
-            with_bucket(create_empty_config(), "test-bucket"),
-            Path("./s3gc_vault"),
-        )
+    s3gc_config = create_config(
+        bucket="test-bucket",
+        vault_path="./s3gc_vault",
     )
 
 # Setup S3GC plugin

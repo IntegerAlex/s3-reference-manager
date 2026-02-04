@@ -20,6 +20,7 @@ from s3gc.config import (
 
 # Builder functions
 from s3gc.builder import (
+    create_config,  # Recommended: simple user-facing API
     create_empty_config,
     with_bucket,
     with_region,
@@ -64,7 +65,8 @@ __all__ = [
     "S3GCConfig",
     "GCMode",
     "CDCBackend",
-    # Builder
+    # Builder (create_config is the recommended user-facing API)
+    "create_config",
     "create_empty_config",
     "with_bucket",
     "with_region",

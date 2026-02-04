@@ -438,3 +438,124 @@ def build_from_steps(*steps: BuilderFunc) -> S3GCConfig:
     for step in steps:
         config = step(config)
     return build_config(config)
+
+
+def create_config(
+    bucket: str,
+    *,
+    region: str = "us-east-1",
+    tables: Dict[str, List[str]] | None = None,
+    mode: str | GCMode = "dry_run",
+    retention_days: int = 7,
+    exclude_prefixes: List[str] | None = None,
+    vault_path: str | Path | None = None,
+    cdc_backend: str | CDCBackend | None = None,
+    cdc_connection_url: str | None = None,
+    schedule_cron: str | None = None,
+    **kwargs: Any,
+) -> S3GCConfig:
+    """
+    Create S3GC configuration from simple parameters.
+
+    This is the recommended user-facing API for creating configurations.
+    It's simpler than the builder pattern and easier to understand.
+
+    Args:
+        bucket: S3 bucket name (required)
+        region: AWS region (default: "us-east-1")
+        tables: Dict mapping table names to column names with S3 references.
+                Example: {"users": ["avatar_url"], "posts": ["image_url"]}
+        mode: Execution mode: "dry_run", "audit_only", or "execute" (default: "dry_run")
+        retention_days: Minimum age in days before deletion (default: 7)
+        exclude_prefixes: List of S3 key prefixes to exclude (default: [])
+        vault_path: Path to vault directory (default: "./s3gc_vault")
+        cdc_backend: CDC backend: "postgres" or "mysql" (optional)
+        cdc_connection_url: Database connection URL for CDC (required if cdc_backend set)
+        schedule_cron: Daily schedule in HH:MM format (optional, e.g., "02:30")
+        **kwargs: Additional configuration options
+
+    Returns:
+        Validated, immutable S3GCConfig instance
+
+    Example:
+        # Simple configuration
+        config = create_config(
+            bucket="my-bucket",
+            tables={
+                "users": ["avatar_url", "cover_photo"],
+                "posts": ["featured_image"]
+            },
+            exclude_prefixes=["backups/", "system/"],
+            retention_days=7
+        )
+
+        # With CDC
+        config = create_config(
+            bucket="my-bucket",
+            tables={"users": ["avatar_url"]},
+            cdc_backend="postgres",
+            cdc_connection_url="postgresql://user:pass@host:5432/db",
+            schedule_cron="02:30"
+        )
+
+        # Execute mode (use with caution!)
+        config = create_config(
+            bucket="my-bucket",
+            tables={"users": ["avatar_url"]},
+            mode="execute",
+            vault_path="/var/lib/s3gc_vault"
+        )
+    """
+    # Start with defaults
+    config_dict = create_empty_config()
+
+    # Set required bucket
+    config_dict["bucket"] = bucket
+
+    # Set optional parameters
+    if region:
+        config_dict["region"] = region
+
+    if tables:
+        for table, columns in tables.items():
+            config_dict = scan_table(config_dict, table, columns)
+
+    if exclude_prefixes:
+        config_dict = exclude_prefixes(config_dict, exclude_prefixes)
+
+    if retention_days is not None:
+        config_dict = retain_objects_older_than(config_dict, retention_days)
+
+    if vault_path:
+        path = Path(vault_path) if isinstance(vault_path, str) else vault_path
+        config_dict = enable_vault(config_dict, path)
+
+    if cdc_backend and cdc_connection_url:
+        if isinstance(cdc_backend, str):
+            backend = CDCBackend(cdc_backend.lower())
+        else:
+            backend = cdc_backend
+        config_dict = enable_cdc(config_dict, backend, cdc_connection_url)
+
+    if schedule_cron:
+        config_dict = run_daily_at(config_dict, schedule_cron)
+
+    # Handle mode
+    if isinstance(mode, str):
+        mode_lower = mode.lower()
+        if mode_lower == "execute":
+            config_dict = execute_mode(config_dict)
+        elif mode_lower == "audit_only":
+            config_dict = audit_only_mode(config_dict)
+        else:
+            config_dict = dry_run_mode(config_dict)
+    else:
+        config_dict["mode"] = mode
+
+    # Apply any additional kwargs
+    for key, value in kwargs.items():
+        if key in config_dict:
+            config_dict[key] = value
+
+    # Build and return validated config
+    return build_config(config_dict)
