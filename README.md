@@ -8,6 +8,8 @@ Production-grade **S3 Reference Manager**: tracks references (via CDC), identifi
 
 *Install as `s3-reference-manager`; import as `s3gc`.*
 
+📚 **[Full Documentation](docs/index.md)** - Complete guides, examples, and API reference
+
 ## Features
 
 - **Zero False Positives**: Multi-layer verification ensures referenced objects are never deleted
@@ -398,6 +400,17 @@ s3gc/
     ├── __init__.py
     └── fastapi.py       # FastAPI plugin
 ```
+
+## Documentation
+
+Complete documentation is available in the [`docs/`](docs/) directory:
+
+- **[Getting Started](docs/getting-started.md)** - Install and run your first cleanup
+- **[How It Works](docs/how-it-works.md)** - Understand the safety mechanisms
+- **[Configuration Guide](docs/configuration.md)** - All configuration options explained
+- **[Real-World Examples](docs/examples.md)** - Practical use cases and scenarios
+- **[API Reference](docs/api-reference.md)** - Complete function documentation
+- **[FastAPI Integration](docs/fastapi.md)** - Add to your web app
 
 ## License
 
