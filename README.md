@@ -100,27 +100,6 @@ config = create_config(
 )
 ```
 
-### Advanced: Builder Pattern
-
-For advanced use cases, you can use the functional builder pattern:
-
-```python
-from s3gc.builder import (
-    build_config, create_empty_config, with_bucket,
-    scan_table, exclude_prefixes, enable_vault
-)
-
-config = build_config(
-    enable_vault(
-        scan_table(
-            with_bucket(create_empty_config(), "my-bucket"),
-            "users", ["avatar_url"]
-        ),
-        Path("/var/lib/s3gc_vault")
-    )
-)
-```
-
 ### Configuration Options
 
 All options can be passed to `create_config()` as keyword arguments:
@@ -379,7 +358,7 @@ mypy s3gc/
 s3gc/
 ├── __init__.py          # Package exports
 ├── config.py            # Configuration dataclasses
-├── builder.py           # Functional builder pattern
+├── builder.py           # Configuration builder (internal)
 ├── core.py              # Main GC orchestrator
 ├── registry.py          # Reference counting (SQLite)
 ├── exceptions.py        # Custom exceptions

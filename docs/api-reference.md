@@ -67,24 +67,6 @@ config = create_config(
 
 ---
 
-### `build_config()`
-
-Advanced: Build configuration using functional builder pattern.
-
-```python
-from s3gc.builder import build_config, create_empty_config, with_bucket
-
-config = build_config(
-    with_bucket(create_empty_config(), "my-bucket")
-)
-```
-
-**When to use**: Programmatic configuration, conditional logic, or if you prefer functional composition.
-
-**For most users**: Use `create_config()` instead - it's simpler.
-
----
-
 ## Core Operations
 
 ### `run_gc_cycle()`
@@ -228,7 +210,7 @@ await shutdown_gc_state(state)
 
 ### `S3GCConfig`
 
-Immutable configuration object (from `create_config()` or `build_config()`).
+Immutable configuration object (from `create_config()`).
 
 ### `GCState`
 

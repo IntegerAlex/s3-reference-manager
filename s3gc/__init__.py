@@ -18,23 +18,8 @@ from s3gc.config import (
     CDCBackend,
 )
 
-# Builder functions
-from s3gc.builder import (
-    create_config,  # Recommended: simple user-facing API
-    create_empty_config,
-    with_bucket,
-    with_region,
-    scan_table,
-    exclude_prefixes,
-    execute_mode,
-    audit_only_mode,
-    retain_objects_older_than,
-    enable_vault,
-    enable_cdc,
-    enable_replication,
-    run_daily_at,
-    build_config,
-)
+# Configuration creation (user-facing API)
+from s3gc.builder import create_config
 
 # Core functions
 from s3gc.core import (
@@ -65,21 +50,8 @@ __all__ = [
     "S3GCConfig",
     "GCMode",
     "CDCBackend",
-    # Builder (create_config is the recommended user-facing API)
+    # Configuration creation (user-facing API)
     "create_config",
-    "create_empty_config",
-    "with_bucket",
-    "with_region",
-    "scan_table",
-    "exclude_prefixes",
-    "execute_mode",
-    "audit_only_mode",
-    "retain_objects_older_than",
-    "enable_vault",
-    "enable_cdc",
-    "enable_replication",
-    "run_daily_at",
-    "build_config",
     # Core
     "GCResult",
     "GCState",

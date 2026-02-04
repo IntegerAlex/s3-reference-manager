@@ -7,8 +7,12 @@ S3GC Builder - Functional builder pattern for configuration.
 This module provides pure functions for building S3GCConfig objects.
 Each function takes a config dict and returns a new dict with the
 modification applied (immutable updates).
+
+**Note**: The builder pattern functions are deprecated for public use.
+Use `create_config()` instead, which provides a simpler API.
 """
 
+import warnings
 from pathlib import Path
 from typing import Any, Callable, Dict, List
 
@@ -24,9 +28,17 @@ def create_empty_config() -> ConfigDict:
     """
     Create an initial empty configuration dictionary.
 
+    .. deprecated:: 0.2.0
+        This function is deprecated. Use `create_config()` instead.
+
     Returns:
         Dict with default values for all configuration fields
     """
+    warnings.warn(
+        "create_empty_config() is deprecated. Use create_config() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return {
         "bucket": "",
         "region": "us-east-1",
@@ -53,6 +65,9 @@ def with_bucket(config: ConfigDict, bucket_name: str) -> ConfigDict:
     """
     Set the S3 bucket name.
 
+    .. deprecated:: 0.2.0
+        This function is deprecated. Use `create_config(bucket=...)` instead.
+
     Args:
         config: Current configuration dictionary
         bucket_name: Name of the S3 bucket to clean
@@ -60,6 +75,11 @@ def with_bucket(config: ConfigDict, bucket_name: str) -> ConfigDict:
     Returns:
         New configuration dictionary with bucket set
     """
+    warnings.warn(
+        "with_bucket() is deprecated. Use create_config(bucket=...) instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return {**config, "bucket": bucket_name}
 
 
@@ -370,6 +390,9 @@ def build_config(config_dict: ConfigDict) -> S3GCConfig:
     """
     Validate and build an immutable S3GCConfig from a configuration dictionary.
 
+    .. deprecated:: 0.2.0
+        This function is deprecated. Use `create_config()` instead.
+
     Args:
         config_dict: Configuration dictionary built using builder functions
 
@@ -379,6 +402,11 @@ def build_config(config_dict: ConfigDict) -> S3GCConfig:
     Raises:
         ConfigurationError: If validation fails
     """
+    warnings.warn(
+        "build_config() is deprecated. Use create_config() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     if not config_dict.get("bucket"):
         from s3gc.exceptions import ConfigurationError
 
