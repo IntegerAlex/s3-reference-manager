@@ -24,7 +24,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from s3gc.backup.restore import RestoreResult, restore_operation, restore_single_by_key
 from s3gc.cdc import start_cdc_capture
-from s3gc.config import S3GCConfig
+from s3gc.config import S3GCConfig, TableConfig
 from s3gc.core import (
     GCMetrics,
     GCResult,
@@ -33,6 +33,12 @@ from s3gc.core import (
     initialize_gc_state,
     run_gc_cycle,
     shutdown_gc_state,
+)
+from s3gc.env import (
+    aggressive_cleanup,
+    compliance_friendly,
+    create_config_from_env,
+    safe_defaults,
 )
 from s3gc.registry import create_registry_handler
 from s3gc.vault import get_vault_stats, list_operations
@@ -490,3 +496,43 @@ def get_s3gc_config(app: FastAPI) -> S3GCConfig:
     if not config:
         raise RuntimeError("S3GC not initialized. Call setup_s3gc_plugin first.")
     return config
+
+
+def setup_s3gc_from_env(
+    app: FastAPI,
+    tables: TableConfig,
+    profile: str | None = None,
+    prefix: str = "/admin/s3gc",
+) -> None:
+    """
+    Convenience helper: configure and attach S3GC using environment variables.
+
+    This is a shortcut for the common case:
+
+        - Build config from env (S3_BUCKET, DATABASE_URL, etc.)
+        - Optionally apply a safety profile
+        - Register the FastAPI plugin
+
+    Args:
+        app: FastAPI application
+        tables: Mapping of table -> list of columns containing S3 keys
+        profile: Optional profile name ('safe', 'aggressive', 'compliance')
+        prefix: URL prefix for admin endpoints (default: /admin/s3gc)
+    """
+
+    config = create_config_from_env(tables=tables)
+
+    profile_name = (profile or os.getenv("S3GC_PROFILE") or "").lower()
+    if profile_name:
+        profile_map = {
+            "safe": safe_defaults,
+            "aggressive": aggressive_cleanup,
+            "compliance": compliance_friendly,
+        }
+        fn = profile_map.get(profile_name)
+        if fn:
+            config = fn(config)
+        else:
+            logger.warning("unknown_s3gc_profile", profile=profile_name)
+
+    setup_s3gc_plugin(app, config, prefix=prefix)

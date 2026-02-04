@@ -14,27 +14,21 @@ That's it! No complex setup needed.
 
 Let's say you have a photo-sharing app. Users upload avatars, and when they delete their account, the avatar file stays in S3 taking up space.
 
-Here's how to clean it up:
+Here's how to clean it up with almost no configuration code:
 
 ```python
-from s3gc import create_config
-from s3gc.integrations.fastapi import setup_s3gc_plugin
 from fastapi import FastAPI
+from s3gc.integrations.fastapi import setup_s3gc_from_env
 
 app = FastAPI()
 
-# Tell S3 Reference Manager:
-# - Which bucket to clean
-# - Which database columns have S3 file paths
-config = create_config(
-    bucket="my-photo-app-storage",
-    tables={
-        "users": ["avatar_url"]  # Watch the avatar_url column
-    }
-)
+# Tell S3 Reference Manager which database columns have S3 file paths
+tables = {
+    "users": ["avatar_url"]  # Watch the avatar_url column
+}
 
-# Add it to your FastAPI app
-setup_s3gc_plugin(app, config)
+# Reads S3_BUCKET, DATABASE_URL, S3GC_MODE, etc. from the environment
+setup_s3gc_from_env(app, tables=tables)
 ```
 
 Now visit `http://localhost:8000/admin/s3gc/status` (with your API key) to see what would be cleaned.

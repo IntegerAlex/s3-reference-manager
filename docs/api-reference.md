@@ -4,9 +4,37 @@ Complete reference for all functions and classes.
 
 ## Configuration Functions
 
+### `create_config_from_env()`
+
+Build a configuration from environment variables plus an explicit `tables` mapping.
+
+```python
+from s3gc import create_config_from_env
+
+config = create_config_from_env(
+    tables={"users": ["avatar_url"]}
+)
+```
+
+**Environment variables used:**
+
+- `S3_BUCKET` (required): S3 bucket name
+- `AWS_REGION` (optional, default `"us-east-1"`): AWS region
+- `S3GC_MODE` (optional, default `"dry_run"`): `"dry_run"`, `"audit_only"`, or `"execute"`
+- `S3GC_VAULT_PATH` (optional, default `"./s3gc_vault"`): Vault directory
+- `S3GC_RETENTION_DAYS` (optional, default `7`): Non-negative integer
+- `S3GC_EXCLUDE_PREFIXES` (optional): Comma-separated prefixes, e.g. `"backups/,system/"`
+- `S3GC_SCHEDULE_CRON` (optional): `"HH:MM"` UTC schedule
+- `DATABASE_URL` (optional): Postgres/MySQL URL for CDC
+- `S3GC_CDC_BACKEND` (optional): `"postgres"` or `"mysql"` (overrides auto-detection)
+
+The `tables` argument is required so S3GC knows which database columns contain S3 paths.
+
+---
+
 ### `create_config()`
 
-The easiest way to create a configuration. Just pass what you need.
+Create a configuration explicitly in code. Just pass what you need.
 
 ```python
 from s3gc import create_config
@@ -33,11 +61,6 @@ config = create_config(
 | `schedule_cron` | `str` | No | `None` | Daily schedule: `"HH:MM"` |
 
 #### Examples
-
-**Minimal** (just bucket):
-```python
-config = create_config(bucket="my-bucket")
-```
 
 **With tables**:
 ```python
@@ -143,19 +166,25 @@ print(f"Total deleted: {metrics.total_deleted}")
 
 ## FastAPI Integration
 
-### `setup_s3gc_plugin()`
+### `setup_s3gc_from_env()`
 
-Add S3 Reference Manager to your FastAPI app.
+Fastest way to add S3GC to your FastAPI app.
 
 ```python
 from fastapi import FastAPI
-from s3gc import create_config
-from s3gc.integrations.fastapi import setup_s3gc_plugin
+from s3gc.integrations.fastapi import setup_s3gc_from_env
 
 app = FastAPI()
-config = create_config(bucket="my-bucket")
-setup_s3gc_plugin(app, config)
+
+setup_s3gc_from_env(
+    app,
+    tables={"users": ["avatar_url"]},
+    profile="safe",  # or "aggressive", "compliance"
+)
 ```
+
+Reads configuration from environment variables (via `create_config_from_env()`)
+and then applies an optional profile before wiring everything into FastAPI.
 
 #### What It Does
 
@@ -163,6 +192,22 @@ setup_s3gc_plugin(app, config)
 - Sets up startup/shutdown handlers
 - Starts CDC if configured
 - Schedules daily runs if `schedule_cron` is set
+
+---
+
+### `setup_s3gc_plugin()`
+
+Lower-level integration if you already have a `S3GCConfig`:
+
+```python
+from fastapi import FastAPI
+from s3gc import create_config
+from s3gc.integrations.fastapi import setup_s3gc_plugin
+
+app = FastAPI()
+config = create_config(bucket="my-bucket", tables={"users": ["avatar_url"]})
+setup_s3gc_plugin(app, config)
+```
 
 #### Admin Endpoints
 

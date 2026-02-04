@@ -34,24 +34,17 @@ pip install s3-reference-manager
 
 ```python
 from fastapi import FastAPI
-from s3gc import create_config
-from s3gc.integrations.fastapi import setup_s3gc_plugin
+from s3gc.integrations.fastapi import setup_s3gc_from_env
 
 app = FastAPI()
 
-# Create configuration (simple and intuitive)
-config = create_config(
-    bucket="my-bucket",
-    tables={
-        "users": ["avatar_url"]
-    },
-    exclude_prefixes=["backups/"],
-    retention_days=7,
-    vault_path="/var/lib/s3gc_vault"
-)
+# Tell S3GC which tables/columns contain S3 paths
+tables = {
+    "users": ["avatar_url"]
+}
 
-# Setup plugin
-setup_s3gc_plugin(app, config)
+# Configure from environment (S3_BUCKET, DATABASE_URL, etc.)
+setup_s3gc_from_env(app, tables=tables)
 ```
 
 ## Configuration

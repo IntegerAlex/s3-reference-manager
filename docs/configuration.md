@@ -2,9 +2,25 @@
 
 Learn how to configure S3 Reference Manager for your needs.
 
-## The Simple Way: `create_config()`
+## The Easiest Way: `create_config_from_env()`
 
-This is the easiest way to configure S3 Reference Manager. Just tell it what you need:
+For most apps, you can let environment variables drive the configuration and only
+tell S3GC which tables/columns contain S3 paths:
+
+```python
+from s3gc import create_config_from_env
+
+config = create_config_from_env(
+    tables={"users": ["avatar_url"]}
+)
+```
+
+This reads values like `S3_BUCKET`, `AWS_REGION`, `S3GC_MODE`, and `DATABASE_URL`
+from the environment and applies safe defaults.
+
+## Manual Configuration: `create_config()`
+
+If you prefer to configure everything in code, use `create_config()`:
 
 ```python
 from s3gc import create_config

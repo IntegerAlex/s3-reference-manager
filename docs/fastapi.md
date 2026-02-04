@@ -6,19 +6,16 @@ Add S3 Reference Manager to your FastAPI app in minutes.
 
 ```python
 from fastapi import FastAPI
-from s3gc import create_config
-from s3gc.integrations.fastapi import setup_s3gc_plugin
+from s3gc.integrations.fastapi import setup_s3gc_from_env
 
 app = FastAPI()
 
-# Create configuration
-config = create_config(
-    bucket="my-bucket",
-    tables={"users": ["avatar_url"]}
-)
+tables = {
+    "users": ["avatar_url"]
+}
 
-# Add to your app (that's it!)
-setup_s3gc_plugin(app, config)
+# Reads S3_BUCKET, DATABASE_URL, S3GC_MODE, etc. from the environment
+setup_s3gc_from_env(app, tables=tables, profile="safe")
 ```
 
 Now your app has admin endpoints for managing cleanup operations.

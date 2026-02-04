@@ -11,61 +11,33 @@ and point-in-time recovery. Package name: s3gc.
 
 __version__ = "0.1.0"
 
-# Configuration
-from s3gc.config import (
-    S3GCConfig,
-    GCMode,
-    CDCBackend,
-)
-
 # Configuration creation (user-facing API)
 from s3gc.builder import create_config
 
 # Core functions
 from s3gc.core import (
-    GCResult,
-    GCState,
-    GCMetrics,
-    RestoreResult,
     initialize_gc_state,
     run_gc_cycle,
     get_metrics,
     shutdown_gc_state,
 )
 
-# Exceptions
-from s3gc.exceptions import (
-    S3GCError,
-    ConfigurationError,
-    BackupError,
-    RestoreError,
-    CDCError,
-    VaultError,
+# Environment-based configuration and profiles (additional helpers)
+from s3gc.env import (  # type: ignore[attr-defined]
+    create_config_from_env,
+    safe_defaults,
+    aggressive_cleanup,
+    compliance_friendly,
 )
 
 __all__ = [
     # Version
     "__version__",
-    # Config
-    "S3GCConfig",
-    "GCMode",
-    "CDCBackend",
-    # Configuration creation (user-facing API)
+    # Configuration creation (primary user-facing APIs)
     "create_config",
-    # Core
-    "GCResult",
-    "GCState",
-    "GCMetrics",
-    "RestoreResult",
+    # Core orchestration functions
     "initialize_gc_state",
     "run_gc_cycle",
     "get_metrics",
     "shutdown_gc_state",
-    # Exceptions
-    "S3GCError",
-    "ConfigurationError",
-    "BackupError",
-    "RestoreError",
-    "CDCError",
-    "VaultError",
 ]

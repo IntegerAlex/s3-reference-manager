@@ -409,8 +409,9 @@ def build_config(config_dict: ConfigDict) -> S3GCConfig:
     )
     if not config_dict.get("bucket"):
         from s3gc.exceptions import ConfigurationError
+        from s3gc.errors import explain_missing_bucket_env
 
-        raise ConfigurationError("bucket is required")
+        raise ConfigurationError(explain_missing_bucket_env())
 
     return S3GCConfig(**config_dict)
 
